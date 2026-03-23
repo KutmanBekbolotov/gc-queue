@@ -20,8 +20,8 @@ export class AuditService {
       action: entry.action,
       entityType: entry.entityType,
       entityId: entry.entityId?.toString(),
-      beforeState: entry.beforeState,
-      afterState: entry.afterState,
+      beforeState: this.clone(entry.beforeState),
+      afterState: this.clone(entry.afterState),
       timestamp: new Date(),
       correlationId: entry.correlationId ?? randomUUID(),
     };
@@ -40,5 +40,10 @@ export class AuditService {
       if (query?.correlationId && log.correlationId !== query.correlationId) return false;
       return true;
     });
+  }
+
+  private clone<T>(value: T): T {
+    if (value === undefined) return value;
+    return structuredClone(value);
   }
 }

@@ -1,0 +1,350 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleCode {
+  SUPER_ADMIN
+  ADMIN
+  OPERATOR
+  ANALYST
+  DEVICE
+  DISPLAY
+}
+
+enum SessionStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum DeviceType {
+  TERMINAL
+  DISPLAY
+  PRINTER
+  OPERATOR_PANEL
+}
+
+enum DeviceStatus {
+  ACTIVE
+  INACTIVE
+  OFFLINE
+  DISABLED
+}
+
+enum WindowStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum NotificationChannel {
+  SMS
+  EMAIL
+  TELEGRAM
+  SYSTEM
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum ActorType {
+  USER
+  DEVICE
+  SYSTEM
+  SERVICE
+}
+
+model User {
+  id                  Int                  @id @default(autoincrement())
+  username            String               @unique
+  email               String?              @unique
+  fullName            String
+  isActive            Boolean              @default(true)
+  isBlocked           Boolean              @default(false)
+  sessions            Session[]
+  userRoles           UserRole[]
+  devices             Device[]             @relation("UserDevices")
+  notifications       Notification[]
+  operatorAssignments OperatorAssignment[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model Role {
+  id             Int            @id @default(autoincrement())
+  code           RoleCode       @unique
+  name           String
+  isSystem       Boolean        @default(false)
+  userRoles      UserRole[]
+  accessPolicies AccessPolicy[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model UserRole {
+  userId     Int
+  roleId     Int
+  assignedAt DateTime @default(now())
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model Session {
+  id                Int           @id @default(autoincrement())
+  userId            Int
+  refreshTokenHash  String
+  ip                String?
+  userAgent         String?
+  deviceFingerprint String?
+  status            SessionStatus @default(ACTIVE)
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Branch {
+  id         Int          @id @default(autoincrement())
+  code       String       @unique
+  name       String
+  isActive   Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  bookings   Booking[]
+  departments Department[]
+  devices    Device[]
+  windows    Window[]
+}
+
+model Department {
+  id                  Int                 @id @default(autoincrement())
+  branchId            Int
+  code                String
+  name                String
+  isActive            Boolean             @default(true)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  branch              Branch              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  bookings            Booking[]
+  departmentServices  DepartmentService[]
+  devices             Device[]
+  operatorAssignments OperatorAssignment[]
+  windows             Window[]
+
+  @@unique([branchId, code])
+}
+
+model Window {
+  id                   Int                  @id @default(autoincrement())
+  branchId             Int
+  departmentId         Int
+  code                 String
+  name                 String
+  isActive             Boolean              @default(true)
+  status               WindowStatus         @default(ACTIVE)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  branch               Branch               @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  department           Department           @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  devices              Device[]
+  operatorAssignments  OperatorAssignment[]
+
+  @@unique([departmentId, code])
+}
+
+model Service {
+  id                 Int                 @id @default(autoincrement())
+  code               String              @unique
+  name               String
+  description        String?
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  bookings           Booking[]
+  departmentServices DepartmentService[]
+}
+
+model DepartmentService {
+  id              Int        @id @default(autoincrement())
+  departmentId    Int
+  serviceId       Int
+  isActive        Boolean    @default(true)
+  bookingEnabled  Boolean    @default(true)
+  terminalEnabled Boolean    @default(true)
+  operatorEnabled Boolean    @default(true)
+  priority        Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  department      Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  service         Service    @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@unique([departmentId, serviceId])
+}
+
+model Device {
+  id              Int               @id @default(autoincrement())
+  code            String            @unique
+  name            String
+  type            DeviceType
+  status          DeviceStatus      @default(ACTIVE)
+  tokenHash       String?
+  branchId        Int?
+  departmentId    Int?
+  windowId        Int?
+  assignedUserId  Int?
+  lastHeartbeatAt DateTime?
+  disabledAt      DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  branch          Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  department      Department?       @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  window          Window?           @relation(fields: [windowId], references: [id], onDelete: SetNull)
+  assignedUser    User?             @relation("UserDevices", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  auditLogs       AuditLog[]
+  notifications   Notification[]
+}
+
+model Booking {
+  id              Int              @id @default(autoincrement())
+  branchId        Int
+  departmentId    Int
+  serviceId       Int
+  customerName    String
+  customerContact String
+  scheduledAt     DateTime
+  status          BookingStatus    @default(PENDING)
+  qrToken         String           @unique
+  qrExpiresAt     DateTime
+  qrUsedAt        DateTime?
+  cancelReason    String?
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  branch          Branch           @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  department      Department       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  service         Service          @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  notifications   Notification[]
+  ticketReference TicketReference?
+}
+
+model TicketReference {
+  id          Int              @id @default(autoincrement())
+  bookingId   Int              @unique
+  publicCode  String           @unique
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  booking     Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  publicView  PublicTicketView?
+}
+
+model PublicTicketView {
+  id                   Int             @id @default(autoincrement())
+  ticketReferenceId    Int             @unique
+  queueState           String?
+  estimatedWaitMinutes Int?
+  lastPublishedAt      DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  ticketReference      TicketReference @relation(fields: [ticketReferenceId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id            Int       @id @default(autoincrement())
+  actorId       String?
+  actorType     ActorType @default(SYSTEM)
+  ip            String?
+  userAgent     String?
+  deviceId      Int?
+  action        String
+  entityType    String
+  entityId      String?
+  beforeState   Json?
+  afterState    Json?
+  timestamp     DateTime  @default(now())
+  correlationId String
+  device        Device?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+}
+
+model Alert {
+  id         Int           @id @default(autoincrement())
+  code       String
+  severity   AlertSeverity
+  message    String
+  payload    Json?
+  resolvedAt DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+}
+
+model Notification {
+  id           Int                @id @default(autoincrement())
+  channel      NotificationChannel
+  status       NotificationStatus @default(PENDING)
+  recipient    String
+  template     String
+  payload      Json?
+  bookingId    Int?
+  userId       Int?
+  deviceId     Int?
+  sentAt       DateTime?
+  errorMessage String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  booking      Booking?           @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  user         User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  device       Device?            @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+}
+
+model OperatorAssignment {
+  id           Int        @id @default(autoincrement())
+  operatorId   Int
+  departmentId Int
+  windowId     Int?
+  isActive     Boolean    @default(true)
+  startedAt    DateTime   @default(now())
+  endedAt      DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  operator     User       @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  window       Window?    @relation(fields: [windowId], references: [id], onDelete: SetNull)
+}
+
+model AccessPolicy {
+  id          Int      @id @default(autoincrement())
+  roleId      Int?
+  subjectType String?
+  subjectId   String?
+  resource    String
+  action      String
+  effect      String
+  conditions  Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  role        Role?    @relation(fields: [roleId], references: [id], onDelete: SetNull)
+}

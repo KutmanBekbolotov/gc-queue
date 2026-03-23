@@ -7,6 +7,7 @@ import {
 import { randomUUID } from 'crypto';
 import { AuditService } from '../audit/audit.service';
 import { BranchesService } from '../branches/branches.service';
+import { ServiceNodeType } from '../catalog/entities/service-node-type.enum';
 import { ServicesService } from '../catalog/services.service';
 import { DepartmentsService } from '../departments/departments.service';
 import { DepartmentServicesService } from '../department-services/department-services.service';
@@ -252,6 +253,9 @@ export class BookingsService {
     const service = this.servicesService.findOne(serviceId);
     if (!service) throw new NotFoundException('Service not found');
     if (!service.isActive) throw new BadRequestException('Service is inactive');
+    if (service.type !== ServiceNodeType.SERVICE) {
+      throw new BadRequestException('Catalog categories cannot be booked');
+    }
 
     const isAvailable = this.departmentServicesService.isServiceAvailable(
       departmentId,

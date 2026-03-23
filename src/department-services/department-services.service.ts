@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
 import { ServicesService } from '../catalog/services.service';
 import { DepartmentsService } from '../departments/departments.service';
 import { DepartmentServiceLink } from './entities/department-service.entity';
 import { AssignDepartmentServiceDto } from './dto/assign-department-service.dto';
 import { UpdateDepartmentServiceDto } from './dto/update-department-service.dto';
+import { ServiceNodeType } from '../catalog/entities/service-node-type.enum';
 
 @Injectable()
 export class DepartmentServicesService {
@@ -18,6 +19,19 @@ export class DepartmentServicesService {
   ) {}
 
   assign(dto: AssignDepartmentServiceDto): DepartmentServiceLink {
+    const department = this.departmentsService.findOne(dto.departmentId);
+    if (!department) {
+      throw new NotFoundException('Department not found');
+    }
+
+    const service = this.servicesService.findOne(dto.serviceId);
+    if (!service) {
+      throw new NotFoundException('Service not found');
+    }
+    if (service.type !== ServiceNodeType.SERVICE) {
+      throw new BadRequestException('Only executable services can be assigned to departments');
+    }
+
     const existing = this.links.find(
       (l) => l.departmentId === dto.departmentId && l.serviceId === dto.serviceId,
     );
@@ -102,6 +116,7 @@ export class DepartmentServicesService {
     const department = this.departmentsService.findOne(departmentId);
     const link = this.findAssignment(departmentId, serviceId);
     if (!service || !department || !link) return false;
+    if (service.type !== ServiceNodeType.SERVICE) return false;
     if (!service.isActive || !department.isActive || !link.isActive) return false;
     return this.isChannelEnabled(link, channel);
   }
