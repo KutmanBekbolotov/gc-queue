@@ -1,0 +1,10 @@
+export const OPERATOR_AUTH_OPTIONS = Symbol('OPERATOR_AUTH_OPTIONS');
+export const OPERATOR_AUTH_USER_SERVICE = Symbol('OPERATOR_AUTH_USER_SERVICE');
+export const OPERATOR_AUTH_SESSION_STORE = Symbol('OPERATOR_AUTH_SESSION_STORE');
+export const OPERATOR_AUTH_LOGIN_ATTEMPT_TRACKER = Symbol(
+  'OPERATOR_AUTH_LOGIN_ATTEMPT_TRACKER',
+);
+
+export const OPERATOR_AUTH_PUBLIC_ROUTE = 'operatorAuthPublicRoute';
+export const OPERATOR_AUTH_ROLES = 'operatorAuthRoles';
+export const OPERATOR_AUTH_REQUEST_USER_KEY = 'operatorAuthUser';
