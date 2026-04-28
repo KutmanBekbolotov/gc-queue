@@ -18,6 +18,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import { Public } from '../auth/decorators/public.decorator';
 import { SuccessResponseDto } from '../common/dto/success-response.dto';
 import { DepartmentServicesService } from './department-services.service';
 import { AssignDepartmentServiceDto } from './dto/assign-department-service.dto';
@@ -43,14 +44,19 @@ export class DepartmentServicesController {
   @ApiNotFoundResponse({ description: 'DepartmentService link not found' })
   @Post('unassign')
   unassign(@Body() dto: AssignDepartmentServiceDto) {
-    const removed = this.departmentServices.unassign(dto.departmentId, dto.serviceId);
-    if (!removed) throw new NotFoundException('DepartmentService link not found');
+    const removed = this.departmentServices.unassign(
+      dto.departmentId,
+      dto.serviceId,
+    );
+    if (!removed)
+      throw new NotFoundException('DepartmentService link not found');
     return { success: true };
   }
 
   @ApiOperation({ summary: 'List raw service links by department' })
   @ApiParam({ name: 'departmentId', example: 1 })
   @ApiOkResponse({ type: DepartmentServiceLink, isArray: true })
+  @Public()
   @Get('by-department/:departmentId')
   getByDepartment(@Param('departmentId') departmentId: string) {
     return this.departmentServices.findByDepartment(Number(departmentId));
@@ -64,17 +70,22 @@ export class DepartmentServicesController {
     enum: ['booking', 'terminal', 'operator'],
   })
   @ApiOkResponse({ type: DepartmentScopedServiceDto, isArray: true })
+  @Public()
   @Get('by-department/:departmentId/services')
   getServicesByDepartment(
     @Param('departmentId') departmentId: string,
     @Query('channel') channel?: 'booking' | 'terminal' | 'operator',
   ) {
-    return this.departmentServices.findAvailableServicesByDepartment(Number(departmentId), channel);
+    return this.departmentServices.findAvailableServicesByDepartment(
+      Number(departmentId),
+      channel,
+    );
   }
 
   @ApiOperation({ summary: 'List raw department links by service' })
   @ApiParam({ name: 'serviceId', example: 1 })
   @ApiOkResponse({ type: DepartmentServiceLink, isArray: true })
+  @Public()
   @Get('by-service/:serviceId')
   getByService(@Param('serviceId') serviceId: string) {
     return this.departmentServices.findByService(Number(serviceId));
@@ -88,12 +99,16 @@ export class DepartmentServicesController {
     enum: ['booking', 'terminal', 'operator'],
   })
   @ApiOkResponse({ type: ServiceScopedDepartmentDto, isArray: true })
+  @Public()
   @Get('by-service/:serviceId/departments')
   getDepartmentsByService(
     @Param('serviceId') serviceId: string,
     @Query('channel') channel?: 'booking' | 'terminal' | 'operator',
   ) {
-    return this.departmentServices.findAvailableDepartmentsByService(Number(serviceId), channel);
+    return this.departmentServices.findAvailableDepartmentsByService(
+      Number(serviceId),
+      channel,
+    );
   }
 
   @ApiOperation({ summary: 'Update department-service link' })

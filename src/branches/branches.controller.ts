@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiNotFoundResponse,
@@ -7,6 +16,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { Public } from '../auth/decorators/public.decorator';
 import { SuccessResponseDto } from '../common/dto/success-response.dto';
 import { Branch } from './entities/branch.entity';
 import { BranchesService } from './branches.service';
@@ -27,6 +37,7 @@ export class BranchesController {
 
   @ApiOperation({ summary: 'List branches' })
   @ApiOkResponse({ type: Branch, isArray: true })
+  @Public()
   @Get()
   findAll() {
     return this.branchesService.findAll();
@@ -36,6 +47,7 @@ export class BranchesController {
   @ApiParam({ name: 'id', example: 1 })
   @ApiOkResponse({ type: Branch })
   @ApiNotFoundResponse({ description: 'Branch not found' })
+  @Public()
   @Get(':id')
   findOne(@Param('id') id: string) {
     const branch = this.branchesService.findOne(Number(id));

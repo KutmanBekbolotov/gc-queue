@@ -21,7 +21,8 @@ NestJS backend for an intelligent electronic queue platform. The service is bein
 - `department-services`
 - `bookings`
 - `qr`
-- `operator-auth`
+- `auth`
+- `admin/users`
 - `audit`
 - `health`
 
@@ -54,27 +55,29 @@ npm run swagger:export
 
 If `API_PREFIX` is set, business routes will be exposed under that prefix.
 
-## Operator auth
+## Auth
 
-`operator-auth` is implemented as an isolated Nest module with secure-by-default behavior:
+Authentication is delegated to the external Common Auth microservice. This app no longer stores auth users, sessions, password hashes or JWT secrets locally.
 
-- access JWT with short TTL
-- refresh token rotation with replay detection
-- password hashing via `scrypt`
-- in-memory session store and login-rate limiting by default
-- pluggable user/session/attempt providers for later Prisma or Redis adapters
-
-The module is imported into the current app only for operator-facing authentication endpoints under `/operator-auth`. Existing business controllers stay unchanged until you explicitly protect them with `OperatorAuthGuard` and, when needed, `OperatorRolesGuard`.
-
-To enable a bootstrap operator in local development, fill:
+Configure the upstream service with:
 
 ```bash
-OPERATOR_AUTH_BOOTSTRAP_USERNAME=operator
-OPERATOR_AUTH_BOOTSTRAP_PASSWORD=change-me-strong-password
-OPERATOR_AUTH_PASSWORD_PEPPER=optional-extra-secret
+AUTH_SERVICE_BASE_URL=http://10.11.13.61
+AUTH_SERVICE_TIMEOUT_MS=5000
 ```
 
-If bootstrap credentials are not set, the auth module stays available but no operator can log in until a custom provider or seed user is configured.
+Local proxy endpoints:
+
+- `POST /auth/login`
+- `GET /auth/me`
+- `POST /auth/logout`
+- `GET /admin/users`
+- `POST /admin/users`
+- `PATCH /admin/users/:id`
+- `DELETE /admin/users/:id`
+- `PATCH /admin/users/:id/role`
+
+`AuthGuard` is global. Routes marked with `@Public()` stay open; other routes validate the bearer token through Common Auth `/auth/me`. `RolesGuard` is also available through the `@Roles()` decorator.
 
 ## Docker
 

@@ -1,4 +1,13 @@
-import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiCreatedResponse,
@@ -9,6 +18,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import { Public } from '../auth/decorators/public.decorator';
 import { CancelBookingDto } from './dto/cancel-booking.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { QueryBookingSlotsDto } from './dto/query-booking-slots.dto';
@@ -29,9 +39,14 @@ export class BookingsController {
   @ApiOkResponse({
     schema: {
       type: 'array',
-      items: { type: 'string', format: 'date-time', example: '2026-03-24T09:00:00.000Z' },
+      items: {
+        type: 'string',
+        format: 'date-time',
+        example: '2026-03-24T09:00:00.000Z',
+      },
     },
   })
+  @Public()
   @Get('slots')
   getAvailableSlots(@Query() query: QueryBookingSlotsDto) {
     return this.bookingsService.getAvailableSlots({
@@ -44,7 +59,11 @@ export class BookingsController {
 
   @ApiOperation({ summary: 'Create booking' })
   @ApiCreatedResponse({ type: Booking })
-  @ApiBadRequestResponse({ description: 'Service is not available for booking in the selected department' })
+  @ApiBadRequestResponse({
+    description:
+      'Service is not available for booking in the selected department',
+  })
+  @Public()
   @Post()
   create(@Body() dto: CreateBookingDto) {
     return this.bookingsService.create(dto);
@@ -61,6 +80,7 @@ export class BookingsController {
   @ApiParam({ name: 'id', example: 1 })
   @ApiOkResponse({ type: QrPayloadDto })
   @ApiNotFoundResponse({ description: 'Booking not found' })
+  @Public()
   @Get(':id/qr')
   getQr(@Param('id') id: string) {
     return this.bookingsService.getQrPayload(Number(id));
@@ -70,6 +90,7 @@ export class BookingsController {
   @ApiParam({ name: 'id', example: 1 })
   @ApiOkResponse({ type: Booking })
   @ApiNotFoundResponse({ description: 'Booking not found' })
+  @Public()
   @Get(':id')
   findOne(@Param('id') id: string) {
     const booking = this.bookingsService.findOne(Number(id));

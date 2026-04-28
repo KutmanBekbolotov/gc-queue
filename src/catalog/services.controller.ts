@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiNotFoundResponse,
@@ -7,6 +16,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { Public } from '../auth/decorators/public.decorator';
 import { SuccessResponseDto } from '../common/dto/success-response.dto';
 import { ServicesService } from './services.service';
 import { CreateServiceDto } from './dto/create-service.dto';
@@ -27,6 +37,7 @@ export class ServicesController {
 
   @ApiOperation({ summary: 'List services' })
   @ApiOkResponse({ type: ServiceEntity, isArray: true })
+  @Public()
   @Get()
   findAll() {
     return this.servicesService.findAll();
@@ -36,6 +47,7 @@ export class ServicesController {
   @ApiParam({ name: 'id', example: 1 })
   @ApiOkResponse({ type: ServiceEntity })
   @ApiNotFoundResponse({ description: 'Service not found' })
+  @Public()
   @Get(':id')
   findOne(@Param('id') id: string) {
     const item = this.servicesService.findOne(Number(id));
