@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post } from '@nestjs/common';
+import { Controller, Get, Header, Param, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
@@ -16,6 +16,27 @@ import { QrInspectionDto } from './dto/qr-inspection.dto';
 @Controller('qr')
 export class QrController {
   constructor(private readonly bookingsService: BookingsService) {}
+
+  @ApiOperation({ summary: 'Render QR token as SVG' })
+  @ApiParam({ name: 'token', example: '4f7a6a48-31cb-4eb8-8b3d-9e3d02977896' })
+  @ApiOkResponse({
+    content: {
+      'image/svg+xml': {
+        schema: {
+          type: 'string',
+          example: '<svg xmlns="http://www.w3.org/2000/svg">...</svg>',
+        },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'QR token not found' })
+  @Public()
+  @Header('Content-Type', 'image/svg+xml')
+  @Header('Cache-Control', 'no-store')
+  @Get(':token.svg')
+  renderSvg(@Param('token') token: string) {
+    return this.bookingsService.getQrSvgByToken(token);
+  }
 
   @ApiOperation({ summary: 'Inspect QR token' })
   @ApiParam({ name: 'token', example: '4f7a6a48-31cb-4eb8-8b3d-9e3d02977896' })

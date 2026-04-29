@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import QRCode from 'qrcode';
 import { AuditService } from '../audit/audit.service';
 import { BranchesService } from '../branches/branches.service';
 import { ServiceNodeType } from '../catalog/entities/service-node-type.enum';
@@ -31,7 +32,11 @@ export class BookingsService {
   ) {}
 
   create(dto: CreateBookingDto): Booking {
-    this.assertBookingAvailability(dto.branchId, dto.departmentId, dto.serviceId);
+    this.assertBookingAvailability(
+      dto.branchId,
+      dto.departmentId,
+      dto.serviceId,
+    );
 
     const scheduledAt = this.parseScheduledAt(dto.scheduledAt);
     if (scheduledAt.getTime() <= Date.now()) {
@@ -89,7 +94,11 @@ export class BookingsService {
   }
 
   getAvailableSlots(query: QueryBookingSlotsDto) {
-    this.assertBookingAvailability(query.branchId, query.departmentId, query.serviceId);
+    this.assertBookingAvailability(
+      query.branchId,
+      query.departmentId,
+      query.serviceId,
+    );
 
     const slotDate = new Date(`${query.date}T00:00:00.000Z`);
     if (Number.isNaN(slotDate.getTime())) {
@@ -109,7 +118,9 @@ export class BookingsService {
 
     const slots = Array.from({ length: 8 }, (_, hourOffset) => {
       const hour = 9 + hourOffset;
-      return new Date(`${query.date}T${hour.toString().padStart(2, '0')}:00:00.000Z`);
+      return new Date(
+        `${query.date}T${hour.toString().padStart(2, '0')}:00:00.000Z`,
+      );
     });
 
     return slots
@@ -173,6 +184,19 @@ export class BookingsService {
     };
   }
 
+  getQrSvg(id: number): Promise<string> {
+    const booking = this.requireBooking(id);
+    return this.renderQrSvg(booking.qrToken);
+  }
+
+  getQrSvgByToken(token: string): Promise<string> {
+    const booking = this.findByQrToken(token);
+    if (!booking) {
+      throw new NotFoundException('QR token not found');
+    }
+    return this.renderQrSvg(booking.qrToken);
+  }
+
   inspectQr(token: string) {
     const booking = this.findByQrToken(token);
     if (!booking) {
@@ -195,7 +219,9 @@ export class BookingsService {
       throw new NotFoundException('QR token not found');
     }
     if (!this.isQrValid(booking)) {
-      throw new BadRequestException('QR token is expired, cancelled, or already used');
+      throw new BadRequestException(
+        'QR token is expired, cancelled, or already used',
+      );
     }
 
     const beforeState = { ...booking };
@@ -229,7 +255,11 @@ export class BookingsService {
     return this.bookings.find((booking) => booking.qrToken === token);
   }
 
-  private hasSlotConflict(departmentId: number, serviceId: number, scheduledAt: Date): boolean {
+  private hasSlotConflict(
+    departmentId: number,
+    serviceId: number,
+    scheduledAt: Date,
+  ): boolean {
     return this.bookings.some((booking) => {
       if (booking.departmentId !== departmentId) return false;
       if (booking.serviceId !== serviceId) return false;
@@ -238,16 +268,23 @@ export class BookingsService {
     });
   }
 
-  private assertBookingAvailability(branchId: number, departmentId: number, serviceId: number) {
+  private assertBookingAvailability(
+    branchId: number,
+    departmentId: number,
+    serviceId: number,
+  ) {
     const branch = this.branchesService.findOne(branchId);
     if (!branch) throw new NotFoundException('Branch not found');
     if (!branch.isActive) throw new BadRequestException('Branch is inactive');
 
     const department = this.departmentsService.findOne(departmentId);
     if (!department) throw new NotFoundException('Department not found');
-    if (!department.isActive) throw new BadRequestException('Department is inactive');
+    if (!department.isActive)
+      throw new BadRequestException('Department is inactive');
     if (department.branchId !== branchId) {
-      throw new BadRequestException('Department does not belong to the selected branch');
+      throw new BadRequestException(
+        'Department does not belong to the selected branch',
+      );
     }
 
     const service = this.servicesService.findOne(serviceId);
@@ -282,5 +319,14 @@ export class BookingsService {
     if (booking.qrExpiresAt.getTime() < Date.now()) return false;
     if (booking.qrUsedAt) return false;
     return true;
+  }
+
+  private renderQrSvg(content: string): Promise<string> {
+    return QRCode.toString(content, {
+      type: 'svg',
+      errorCorrectionLevel: 'M',
+      margin: 2,
+      width: 256,
+    });
   }
 }

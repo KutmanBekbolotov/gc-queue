@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   NotFoundException,
   Param,
   Patch,
@@ -84,6 +85,27 @@ export class BookingsController {
   @Get(':id/qr')
   getQr(@Param('id') id: string) {
     return this.bookingsService.getQrPayload(Number(id));
+  }
+
+  @ApiOperation({ summary: 'Get QR SVG for booking' })
+  @ApiParam({ name: 'id', example: 1 })
+  @ApiOkResponse({
+    content: {
+      'image/svg+xml': {
+        schema: {
+          type: 'string',
+          example: '<svg xmlns="http://www.w3.org/2000/svg">...</svg>',
+        },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Booking not found' })
+  @Public()
+  @Header('Content-Type', 'image/svg+xml')
+  @Header('Cache-Control', 'no-store')
+  @Get(':id/qr.svg')
+  getQrSvg(@Param('id') id: string) {
+    return this.bookingsService.getQrSvg(Number(id));
   }
 
   @ApiOperation({ summary: 'Get booking by id' })

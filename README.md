@@ -6,7 +6,7 @@ NestJS backend for an intelligent electronic queue platform. The service is bein
 
 - CRUD modules for branches, departments, services and dynamic department-services bindings
 - booking API with validation against department-service availability
-- QR inspection and single-use protection layer
+- QR inspection, SVG rendering and single-use protection layer
 - in-memory audit log for directory changes and booking lifecycle
 - health endpoint
 - Swagger bootstrap in `main.ts`
@@ -78,6 +78,18 @@ Local proxy endpoints:
 - `PATCH /admin/users/:id/role`
 
 `AuthGuard` is global. Routes marked with `@Public()` stay open; other routes validate the bearer token through Common Auth `/auth/me`. `RolesGuard` is also available through the `@Roles()` decorator.
+
+## QR
+
+QR codes currently encode the booking `qrToken`, so scanners can pass that token to the existing inspection and consume endpoints without coupling the QR image to the future Spring queue-core URL contract.
+
+Local QR endpoints:
+
+- `GET /bookings/:id/qr` returns the booking QR payload
+- `GET /bookings/:id/qr.svg` renders the booking QR as SVG
+- `GET /qr/:token` inspects a QR token
+- `GET /qr/:token.svg` renders an existing QR token as SVG
+- `POST /qr/:token/consume` consumes a QR token once
 
 ## Docker
 
