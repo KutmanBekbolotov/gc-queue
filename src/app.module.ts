@@ -8,6 +8,8 @@ import { DepartmentServicesModule } from './department-services/department-servi
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { QrModule } from './qr/qr.module';
+import { CoreModule } from './core/core.module';
+import { CoreGatewayModule } from './core-gateway/core-gateway.module';
 
 @Module({
   imports: [
@@ -17,6 +19,13 @@ import { QrModule } from './qr/qr.module';
       baseUrl: process.env.AUTH_SERVICE_BASE_URL ?? 'http://10.11.13.61',
       timeoutMs: Number(process.env.AUTH_SERVICE_TIMEOUT_MS ?? 5000),
     }),
+    CoreModule.register({
+      baseUrl: process.env.EQUEUE_CORE_URL ?? 'http://localhost:8080/api',
+      internalToken:
+        process.env.EQUEUE_CORE_INTERNAL_TOKEN ?? 'change-me-dev-token',
+      timeoutMs: Number(process.env.EQUEUE_CORE_TIMEOUT_MS ?? 10000),
+    }),
+    CoreGatewayModule,
     BranchesModule,
     ServicesModule,
     DepartmentsModule,

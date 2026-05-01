@@ -35,7 +35,11 @@ export function extractBearerToken(header?: string): string | null {
 }
 
 export function normalizeRoleCode(role: string): string {
-  return role.trim().toUpperCase();
+  return role
+    .trim()
+    .toUpperCase()
+    .replace(/^ROLE_/, '')
+    .replace(/[-\s]+/g, '_');
 }
 
 export function normalizeAuthContext(payload: unknown): AuthRequestUser {

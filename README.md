@@ -15,6 +15,13 @@ NestJS backend for an intelligent electronic queue platform. The service is bein
 
 ## Current API groups
 
+- `catalog/department-services` Spring core public catalog gateway
+- `public/bookings` Spring core public booking gateway
+- `terminal`
+- `operator`
+- `tv`
+- `admin/*` Spring core admin gateway, except `admin/users`
+- `management`
 - `branches`
 - `departments`
 - `services`
@@ -78,6 +85,44 @@ Local proxy endpoints:
 - `PATCH /admin/users/:id/role`
 
 `AuthGuard` is global. Routes marked with `@Public()` stay open; other routes validate the bearer token through Common Auth `/auth/me`. `RolesGuard` is also available through the `@Roles()` decorator.
+
+## Spring Queue Core
+
+NestJS proxies business operations to Spring core and injects the internal actor headers server-side. Browsers, terminals and TV devices must never receive `EQUEUE_CORE_INTERNAL_TOKEN`.
+
+Configure the core integration with:
+
+```bash
+EQUEUE_CORE_URL=http://localhost:8080/api
+EQUEUE_CORE_INTERNAL_TOKEN=change-me-dev-token
+EQUEUE_CORE_TIMEOUT_MS=10000
+EQUEUE_TV_CACHE_TTL_MS=2000
+```
+
+Initial gateway routes:
+
+- `GET /catalog/department-services?departmentId=...`
+- `GET /public/bookings/slots?departmentId=...&serviceId=...&date=2026-05-01`
+- `POST /public/bookings`
+- `GET /public/bookings/:confirmationCode`
+- `POST /public/bookings/:confirmationCode/confirm`
+- `POST /public/bookings/:confirmationCode/check-in`
+- `POST /public/bookings/:confirmationCode/cancel`
+- `POST /terminal/:deviceCode/tickets`
+- `POST /terminal/:deviceCode/qr-sessions`
+- `GET /terminal/:deviceCode/tickets/:ticketId/print`
+- `GET /qr/sessions/validate?token=...`
+- `POST /qr/tickets`
+- `GET /tv/:deviceCode/snapshot`
+- `GET /tv/snapshot?departmentId=...`
+- `GET /operator/dashboard`
+- `POST /operator/window/available`
+- `POST /operator/tickets/next`
+- `POST /operator/tickets/:ticketId/:action`
+- `GET /operator/tickets/restorable`
+- `POST /operator/window/away`
+
+Authenticated admin and manager routes are proxied to `/internal/admin/**`, `/internal/management/**` and `/internal/dashboard/department`. Spring core remains the source of truth for queue state, ticket numbers, bookings and device state.
 
 ## QR
 
