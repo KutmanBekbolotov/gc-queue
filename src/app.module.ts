@@ -16,7 +16,8 @@ import { CoreGatewayModule } from './core-gateway/core-gateway.module';
     AuditModule,
     HealthModule,
     AuthModule.register({
-      baseUrl: process.env.AUTH_SERVICE_BASE_URL ?? 'http://10.11.13.61',
+      baseUrl:
+        process.env.AUTH_SERVICE_BASE_URL ?? 'https://auth-api.tsvs.kg',
       timeoutMs: Number(process.env.AUTH_SERVICE_TIMEOUT_MS ?? 5000),
     }),
     CoreModule.register({

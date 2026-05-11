@@ -13,7 +13,22 @@ async function bootstrap() {
     app.setGlobalPrefix(apiPrefix);
   }
 
-  app.enableCors();
+  app.enableCors({
+    origin: '*',
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Accept',
+      'Accept-Language',
+      'Authorization',
+      'Content-Type',
+      'X-Department-Id',
+      'X-Request-Id',
+      'X-Window-Id',
+    ],
+    exposedHeaders: ['Content-Disposition', 'X-Request-Id'],
+    credentials: false,
+    optionsSuccessStatus: 204,
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

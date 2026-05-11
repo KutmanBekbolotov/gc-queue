@@ -75,7 +75,7 @@ Authentication is delegated to the external Common Auth microservice. This app n
 Configure the upstream service with:
 
 ```bash
-AUTH_SERVICE_BASE_URL=http://10.11.13.61
+AUTH_SERVICE_BASE_URL=https://auth-api.tsvs.kg
 AUTH_SERVICE_TIMEOUT_MS=5000
 ```
 

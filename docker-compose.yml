@@ -5,7 +5,7 @@ services:
     ports:
       - '${APP_HOST_PORT:-3000}:3000'
     env_file:
-      - .env.example
+      - .env
     depends_on:
       - postgres
       - redis
