@@ -60,6 +60,12 @@ Frontend integration guide:
 docs/FRONTEND_INTEGRATION.md
 ```
 
+Full system usage guide:
+
+```bash
+docs/SYSTEM_USAGE_GUIDE.md
+```
+
 Export OpenAPI JSON:
 
 ```bash

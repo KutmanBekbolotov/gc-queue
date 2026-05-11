@@ -44,7 +44,7 @@ export class AdminUsersController {
   @ApiBody({ type: CreateUserDto })
   @ApiOkResponse({ description: 'Common Auth user create response' })
   @Post()
-  create(@Body() body: Record<string, unknown>, @Req() request: Request) {
+  create(@Body() body: CreateUserDto, @Req() request: Request) {
     return this.authService.createUser(
       this.getBearerToken(request),
       body,
@@ -59,7 +59,7 @@ export class AdminUsersController {
   @Patch(':id')
   update(
     @Param('id') id: string,
-    @Body() body: Record<string, unknown>,
+    @Body() body: UpdateUserDto,
     @Req() request: Request,
   ) {
     return this.authService.updateUser(
@@ -90,7 +90,7 @@ export class AdminUsersController {
   @Patch(':id/role')
   updateRole(
     @Param('id') id: string,
-    @Body() body: Record<string, unknown>,
+    @Body() body: UpdateUserRoleDto,
     @Req() request: Request,
   ) {
     return this.authService.updateUserRole(

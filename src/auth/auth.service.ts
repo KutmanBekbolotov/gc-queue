@@ -9,12 +9,19 @@ import {
 import type { Request } from 'express';
 import { AUTH_MODULE_OPTIONS } from './auth.constants';
 import { LoginDto } from './dto/login.dto';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import {
   AuthProxyResponse,
   AuthRequestUser,
   ResolvedAuthModuleOptions,
 } from './auth.interfaces';
-import { normalizeAuthContext } from './auth.utils';
+import {
+  normalizeAuthContext,
+  normalizeAuthUserManagementResponse,
+  toCommonAuthUserWriteBody,
+} from './auth.utils';
 
 type AuthHttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 
@@ -64,28 +71,28 @@ export class AuthService {
     return this.request('GET', '/admin/users', {
       token,
       request,
-    });
+    }).then(normalizeAuthUserManagementResponse);
   }
 
-  createUser(token: string, body: Record<string, unknown>, request?: Request) {
+  createUser(token: string, body: CreateUserDto, request?: Request) {
     return this.request('POST', '/admin/users', {
       token,
-      body,
+      body: toCommonAuthUserWriteBody(body),
       request,
-    });
+    }).then(normalizeAuthUserManagementResponse);
   }
 
   updateUser(
     token: string,
     id: string,
-    body: Record<string, unknown>,
+    body: UpdateUserDto,
     request?: Request,
   ) {
     return this.request('PATCH', `/admin/users/${encodeURIComponent(id)}`, {
       token,
-      body,
+      body: toCommonAuthUserWriteBody(body),
       request,
-    });
+    }).then(normalizeAuthUserManagementResponse);
   }
 
   deleteUser(token: string, id: string, request?: Request) {
@@ -98,7 +105,7 @@ export class AuthService {
   updateUserRole(
     token: string,
     id: string,
-    body: Record<string, unknown>,
+    body: UpdateUserRoleDto,
     request?: Request,
   ) {
     return this.request(
@@ -106,10 +113,10 @@ export class AuthService {
       `/admin/users/${encodeURIComponent(id)}/role`,
       {
         token,
-        body,
+        body: toCommonAuthUserWriteBody(body),
         request,
       },
-    );
+    ).then(normalizeAuthUserManagementResponse);
   }
 
   private async request(

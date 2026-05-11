@@ -124,18 +124,31 @@ describe('AuthModule (e2e)', () => {
         jsonResponse({
           id: 'user-2',
           email: 'new-user@example.com',
+          name: 'Queue Operator',
+          role: 'Operator',
+          roles: ['Operator'],
         }),
       );
 
-    await request(server)
+    const response = await request(server)
       .post('/admin/users')
       .set('Authorization', 'Bearer admin-token')
       .send({
         email: 'new-user@example.com',
         password: 'StrongPassword_123!',
+        fullName: 'Queue Operator',
         role: 'OPERATOR',
+        scopes: ['queue:read'],
       })
       .expect(201);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        fullName: 'Queue Operator',
+        role: 'OPERATOR',
+        roles: ['OPERATOR'],
+      }),
+    );
 
     const [meUrl] = getFetchCall(fetchMock, 0);
     const [adminUrl, adminInit] = getFetchCall(fetchMock, 1);
@@ -148,9 +161,34 @@ describe('AuthModule (e2e)', () => {
       JSON.stringify({
         email: 'new-user@example.com',
         password: 'StrongPassword_123!',
-        role: 'OPERATOR',
+        name: 'Queue Operator',
+        role: 'Operator',
       }),
     );
+  });
+
+  it('rejects non-CAPS admin user roles at the gateway boundary', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        id: 'admin-1',
+        email: 'admin@example.com',
+        roles: ['ADMIN'],
+      }),
+    );
+
+    await request(server)
+      .post('/admin/users')
+      .set('Authorization', 'Bearer admin-token')
+      .send({
+        email: 'new-user@example.com',
+        password: 'StrongPassword_123!',
+        role: 'Operator',
+      })
+      .expect(400);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [meUrl] = getFetchCall(fetchMock, 0);
+    expect(meUrl).toBe('http://common-auth.test/auth/me');
   });
 });
 
