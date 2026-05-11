@@ -22,6 +22,17 @@ export class ManagerDashboardGatewayController {
     private readonly actors: CoreActorFactory,
   ) {}
 
+  @ApiOperation({ summary: 'Get Spring core admin dashboard' })
+  @ApiOkResponse({ description: 'Spring core admin dashboard response' })
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Get('admin')
+  admin(@CurrentUser() user: AuthRequestUser, @Req() request: Request) {
+    return this.core.get(
+      '/internal/dashboard/admin',
+      this.actors.fromUser(user, request),
+    );
+  }
+
   @ApiOperation({ summary: 'Get Spring core department dashboard' })
   @ApiOkResponse({ description: 'Spring core department dashboard response' })
   @Get('department')

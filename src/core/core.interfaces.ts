@@ -51,6 +51,14 @@ export type CoreProxyResponse =
   | boolean
   | null;
 
+export interface CoreRawResponse {
+  status: number;
+  body: Buffer;
+  contentType?: string;
+  contentDisposition?: string;
+  cacheControl?: string;
+}
+
 export interface CoreRequestOptions {
   body?: unknown;
   params?: Record<string, unknown>;

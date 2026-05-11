@@ -54,6 +54,12 @@ Swagger JSON endpoint:
 http://localhost:3000/docs-json
 ```
 
+Frontend integration guide:
+
+```bash
+docs/FRONTEND_INTEGRATION.md
+```
+
 Export OpenAPI JSON:
 
 ```bash
@@ -93,8 +99,8 @@ NestJS proxies business operations to Spring core and injects the internal actor
 Configure the core integration with:
 
 ```bash
-EQUEUE_CORE_URL=http://localhost:8080/api
-EQUEUE_CORE_INTERNAL_TOKEN=change-me-dev-token
+EQUEUE_CORE_URL=http://10.11.13.50:18080/api
+EQUEUE_CORE_INTERNAL_TOKEN=<same-as-spring-APP_INTERNAL_TOKEN>
 EQUEUE_CORE_TIMEOUT_MS=10000
 EQUEUE_TV_CACHE_TTL_MS=2000
 ```
@@ -121,8 +127,24 @@ Initial gateway routes:
 - `POST /operator/tickets/:ticketId/:action`
 - `GET /operator/tickets/restorable`
 - `POST /operator/window/away`
+- `GET /tickets/query/waiting`
+- `GET /tickets/query/operator/current`
+- `GET /tickets/query/by-number`
+- `GET /tickets/query/:ticketId/history`
+- `GET /tickets/print`
+- `GET /tickets/:ticketId/print`
+- `GET /dashboard/admin`
+- `GET /dashboard/department?departmentId=...`
+- `GET /analytics/department-load`
+- `GET /analytics/operator-stats`
+- `GET /analytics/summary`
+- `POST /analytics/recalculate`
+- `GET /reports/department-load.xlsx`
+- `GET /audit/logs`
+- `GET /audit/logs/by-actor`
+- `POST /maintenance/run`
 
-Authenticated admin and manager routes are proxied to `/internal/admin/**`, `/internal/management/**` and `/internal/dashboard/department`. Spring core remains the source of truth for queue state, ticket numbers, bookings and device state.
+Authenticated admin, manager, auditor and operator routes are proxied to Spring `/internal/**` endpoints. Spring core remains the source of truth for queue state, ticket numbers, bookings, devices, analytics and reports.
 
 ## QR
 

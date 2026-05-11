@@ -31,6 +31,16 @@ const MANAGEMENT_RESOURCES = new Set([
   'no-show-reasons',
 ]);
 
+const MANAGEMENT_ITEM_PATHS: Record<string, string> = {
+  employees: 'employees',
+  halls: 'halls',
+  windows: 'windows',
+  terminals: 'terminals',
+  'tv-devices': 'tv-devices',
+  'reject-reasons': 'reject-reasons',
+  'no-show-reasons': 'no-show-reasons',
+};
+
 @ApiTags('core management')
 @ApiBearerAuth()
 @Roles('MANAGER', 'ADMIN', 'SUPER_ADMIN')
@@ -94,20 +104,72 @@ export class ManagementGatewayController {
     @CurrentUser() user: AuthRequestUser,
     @Req() request: Request,
   ) {
-    this.assertResource(resource);
+    this.assertItemResource(resource);
 
     return this.gateway.proxy(
       request,
-      `/internal/management/departments/${encodeURIComponent(
-        departmentId,
-      )}/${resource}/${encodeURIComponent(id)}`,
+      `/internal/management/${MANAGEMENT_ITEM_PATHS[resource]}/${encodeURIComponent(
+        id,
+      )}`,
       this.actors.fromUser(user, request, { departmentId }),
+    );
+  }
+
+  @ApiOperation({
+    summary: 'Proxy Spring core employee-service assignment endpoint',
+  })
+  @ApiParam({ name: 'employeeId', type: String })
+  @ApiParam({ name: 'serviceId', type: String })
+  @ApiOkResponse({ description: 'Spring core employee-service response' })
+  @HttpCode(200)
+  @All('employees/:employeeId/services/:serviceId')
+  employeeService(
+    @Param('employeeId') employeeId: string,
+    @Param('serviceId') serviceId: string,
+    @CurrentUser() user: AuthRequestUser,
+    @Req() request: Request,
+  ) {
+    return this.gateway.proxy(
+      request,
+      `/internal/management/employees/${encodeURIComponent(
+        employeeId,
+      )}/services/${encodeURIComponent(serviceId)}`,
+      this.actors.fromUser(user, request),
+    );
+  }
+
+  @ApiOperation({
+    summary: 'Proxy Spring core employee-window assignment endpoint',
+  })
+  @ApiParam({ name: 'employeeId', type: String })
+  @ApiParam({ name: 'windowId', type: String })
+  @ApiOkResponse({ description: 'Spring core employee-window response' })
+  @HttpCode(200)
+  @All('employees/:employeeId/windows/:windowId')
+  employeeWindow(
+    @Param('employeeId') employeeId: string,
+    @Param('windowId') windowId: string,
+    @CurrentUser() user: AuthRequestUser,
+    @Req() request: Request,
+  ) {
+    return this.gateway.proxy(
+      request,
+      `/internal/management/employees/${encodeURIComponent(
+        employeeId,
+      )}/windows/${encodeURIComponent(windowId)}`,
+      this.actors.fromUser(user, request),
     );
   }
 
   private assertResource(resource: string) {
     if (!MANAGEMENT_RESOURCES.has(resource)) {
       throw new NotFoundException('Management resource is not supported');
+    }
+  }
+
+  private assertItemResource(resource: string) {
+    if (!MANAGEMENT_ITEM_PATHS[resource]) {
+      throw new NotFoundException('Management item resource is not supported');
     }
   }
 }

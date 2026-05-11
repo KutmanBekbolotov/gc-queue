@@ -1,3 +1,4 @@
+import '../src/env';
 import { writeFileSync } from 'fs';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';

@@ -12,6 +12,7 @@ import {
   CoreActor,
   CoreHttpMethod,
   CoreProxyResponse,
+  CoreRawResponse,
   CoreRequestOptions,
   ResolvedCoreModuleOptions,
 } from './core.interfaces';
@@ -48,6 +49,14 @@ export class EqueueCoreClient {
     return this.request<T>('PATCH', path, actor, { body: body ?? {} });
   }
 
+  put<T = CoreProxyResponse>(
+    path: string,
+    actor: CoreActor,
+    body?: unknown,
+  ): Promise<T> {
+    return this.request<T>('PUT', path, actor, { body: body ?? {} });
+  }
+
   delete<T = CoreProxyResponse>(
     path: string,
     actor: CoreActor,
@@ -56,6 +65,14 @@ export class EqueueCoreClient {
     return this.request<T>('DELETE', path, actor, {
       body: body ?? undefined,
     });
+  }
+
+  getRaw(
+    path: string,
+    actor: CoreActor,
+    params?: Record<string, unknown>,
+  ): Promise<CoreRawResponse> {
+    return this.requestRaw('GET', path, actor, { params });
   }
 
   async request<T = CoreProxyResponse>(
@@ -104,6 +121,60 @@ export class EqueueCoreClient {
     }
 
     return (body ?? { success: true }) as T;
+  }
+
+  async requestRaw(
+    method: CoreHttpMethod,
+    path: string,
+    actor: CoreActor,
+    requestOptions: CoreRequestOptions = {},
+  ): Promise<CoreRawResponse> {
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      this.options.timeoutMs,
+    );
+    const headers = this.headers(actor, requestOptions.body !== undefined);
+
+    let response: Response;
+
+    try {
+      response = await fetch(this.buildUrl(path, requestOptions.params), {
+        method,
+        headers,
+        body:
+          requestOptions.body === undefined
+            ? undefined
+            : JSON.stringify(requestOptions.body),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new GatewayTimeoutException('Spring core request timed out');
+      }
+
+      throw new ServiceUnavailableException('Spring core is unavailable');
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (!response.ok) {
+      const body = await this.parseBody(response);
+      throw this.toHttpException(
+        body,
+        response.status,
+        headers['X-Request-Id'],
+      );
+    }
+
+    return {
+      status: response.status,
+      body: Buffer.from(await response.arrayBuffer()),
+      contentType: response.headers.get('content-type') ?? undefined,
+      contentDisposition:
+        response.headers.get('content-disposition') ?? undefined,
+      cacheControl: response.headers.get('cache-control') ?? undefined,
+    };
   }
 
   private headers(actor: CoreActor, hasBody: boolean): Record<string, string> {

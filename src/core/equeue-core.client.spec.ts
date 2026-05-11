@@ -103,6 +103,45 @@ describe('EqueueCoreClient', () => {
       });
     }
   });
+
+  it('downloads raw Spring core responses', async () => {
+    const file = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
+    fetchMock.mockResolvedValueOnce(
+      new Response(file, {
+        status: 200,
+        headers: {
+          'content-type':
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'content-disposition': 'attachment; filename="report.xlsx"',
+        },
+      }),
+    );
+
+    const response = await client.getRaw(
+      '/internal/reports/department-load.xlsx',
+      {
+        actorId: 'manager-1',
+        role: 'MANAGER',
+        departmentId: 'department-1',
+        requestId: 'req-1',
+      },
+      { departmentId: 'department-1' },
+    );
+
+    const [url, init] = getFetchCall(fetchMock, 0);
+
+    expect(url).toBe(
+      'http://spring-core.test/api/internal/reports/department-load.xlsx?departmentId=department-1',
+    );
+    expect(init?.method).toBe('GET');
+    expect(response.body).toEqual(file);
+    expect(response.contentType).toBe(
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    expect(response.contentDisposition).toBe(
+      'attachment; filename="report.xlsx"',
+    );
+  });
 });
 
 function jsonResponse(body: unknown, status = 200): Response {
