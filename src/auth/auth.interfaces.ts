@@ -23,6 +23,8 @@ export interface AuthRequestUser extends Record<string, unknown> {
   email?: string;
   username?: string;
   fullName?: string;
+  ordId?: string;
+  departmentId?: string;
   role?: string;
   roles: string[];
   scopes: string[];

@@ -146,6 +146,8 @@ type AuthContext = {
   email?: string;
   username?: string;
   fullName?: string;
+  ordId?: string;
+  departmentId?: string;
   role?: string;
   roles?: string[];
   scopes?: string[];
@@ -629,7 +631,7 @@ Body/query проксируются в Spring core.
 
 ### 6.10. Admin users через Common Auth
 
-Все endpoints требуют bearer token. Ответы полностью проксируются из Common Auth.
+Все endpoints требуют bearer token. Nest проксирует запросы в Common Auth, нормализует роли в CAPS и мапит legacy `fullName` в `username`.
 
 Список пользователей:
 
@@ -647,11 +649,25 @@ POST /admin/users
 {
   "email": "operator@example.com",
   "password": "StrongPassword_123!",
-  "fullName": "Queue Operator",
-  "role": "OPERATOR",
-  "scopes": ["queue:read"]
+  "username": "operator",
+  "role": "OPERATOR"
 }
 ```
+
+Если админ создает заведующего отделением (`MANAGER`), нужно передать привязку:
+
+```json
+{
+  "email": "manager@example.com",
+  "password": "StrongPassword_123!",
+  "username": "manager",
+  "role": "MANAGER",
+  "ordId": "00000000-0000-0000-0000-000000000101",
+  "departmentId": "00000000-0000-0000-0000-000000000301"
+}
+```
+
+Если пользователь с ролью `MANAGER` создает пользователей, frontend может не отправлять `ordId` и `departmentId`: Nest автоматически берет их из текущего manager `/auth/me` и подставляет в создаваемого пользователя. Если frontend все-таки отправит другие значения, Nest заменит их значениями текущего manager.
 
 Обновить профиль/scope:
 
@@ -662,10 +678,9 @@ PATCH /admin/users/{id}
 ```json
 {
   "email": "operator@example.com",
-  "fullName": "Queue Operator",
+  "username": "operator",
   "isActive": true,
-  "isBlocked": false,
-  "scopes": ["queue:read"]
+  "isBlocked": false
 }
 ```
 
@@ -781,16 +796,22 @@ type LoginBody = {
 type CreateUserBody = {
   email: string;
   password: string;
+  username?: string;
   fullName?: string;
   role?: string;
+  ordId?: string;
+  departmentId?: string;
   scopes?: string[];
 };
 
 type UpdateUserBody = {
   email?: string;
+  username?: string;
   fullName?: string;
   isActive?: boolean;
   isBlocked?: boolean;
+  ordId?: string;
+  departmentId?: string;
   scopes?: string[];
 };
 

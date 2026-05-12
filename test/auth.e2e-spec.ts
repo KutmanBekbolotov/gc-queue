@@ -124,7 +124,7 @@ describe('AuthModule (e2e)', () => {
         jsonResponse({
           id: 'user-2',
           email: 'new-user@example.com',
-          name: 'Queue Operator',
+          username: 'operator',
           role: 'Operator',
           roles: ['Operator'],
         }),
@@ -136,7 +136,7 @@ describe('AuthModule (e2e)', () => {
       .send({
         email: 'new-user@example.com',
         password: 'StrongPassword_123!',
-        fullName: 'Queue Operator',
+        fullName: 'operator',
         role: 'OPERATOR',
         scopes: ['queue:read'],
       })
@@ -144,7 +144,8 @@ describe('AuthModule (e2e)', () => {
 
     expect(response.body).toEqual(
       expect.objectContaining({
-        fullName: 'Queue Operator',
+        fullName: 'operator',
+        username: 'operator',
         role: 'OPERATOR',
         roles: ['OPERATOR'],
       }),
@@ -161,8 +162,110 @@ describe('AuthModule (e2e)', () => {
       JSON.stringify({
         email: 'new-user@example.com',
         password: 'StrongPassword_123!',
-        name: 'Queue Operator',
+        username: 'operator',
         role: 'Operator',
+      }),
+    );
+  });
+
+  it('forwards organization and department when admin creates a manager', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          id: 'admin-1',
+          email: 'admin@example.com',
+          roles: ['ADMIN'],
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          id: 'manager-1',
+          email: 'manager@example.com',
+          username: 'manager',
+          role: 'Manager',
+          ordId: 'ord-1',
+          departmentId: 'department-1',
+        }),
+      );
+
+    const response = await request(server)
+      .post('/admin/users')
+      .set('Authorization', 'Bearer admin-token')
+      .send({
+        email: 'manager@example.com',
+        password: 'StrongPassword_123!',
+        username: 'manager',
+        role: 'MANAGER',
+        ordId: 'ord-1',
+        departmentId: 'department-1',
+      })
+      .expect(201);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        role: 'MANAGER',
+        ordId: 'ord-1',
+        departmentId: 'department-1',
+      }),
+    );
+
+    const [, adminInit] = getFetchCall(fetchMock, 1);
+    expect(parseJsonBody(adminInit)).toEqual(
+      expect.objectContaining({
+        email: 'manager@example.com',
+        password: 'StrongPassword_123!',
+        username: 'manager',
+        role: 'Manager',
+        ordId: 'ord-1',
+        departmentId: 'department-1',
+      }),
+    );
+  });
+
+  it('auto-fills organization and department from current manager', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          id: 'manager-1',
+          email: 'manager@example.com',
+          roles: ['MANAGER'],
+          ordId: 'ord-1',
+          departmentId: 'department-1',
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          id: 'operator-1',
+          email: 'operator@example.com',
+          username: 'operator',
+          role: 'Operator',
+          ordId: 'ord-1',
+          departmentId: 'department-1',
+        }),
+      );
+
+    await request(server)
+      .post('/admin/users')
+      .set('Authorization', 'Bearer manager-token')
+      .send({
+        email: 'operator@example.com',
+        password: 'StrongPassword_123!',
+        username: 'operator',
+        role: 'OPERATOR',
+        ordId: 'other-ord',
+        departmentId: 'other-department',
+      })
+      .expect(201);
+
+    const [, adminInit] = getFetchCall(fetchMock, 1);
+    expect(parseJsonBody(adminInit)).toEqual(
+      expect.objectContaining({
+        email: 'operator@example.com',
+        password: 'StrongPassword_123!',
+        username: 'operator',
+        role: 'Operator',
+        ordId: 'ord-1',
+        departmentId: 'department-1',
       }),
     );
   });
@@ -220,4 +323,12 @@ function getHeader(
 ): string | undefined {
   const headers = init?.headers as Record<string, string> | undefined;
   return headers?.[name];
+}
+
+function parseJsonBody(init: RequestInit | undefined): Record<string, unknown> {
+  if (typeof init?.body !== 'string') {
+    throw new Error('Expected request body to be a JSON string');
+  }
+
+  return JSON.parse(init.body) as Record<string, unknown>;
 }

@@ -13,7 +13,17 @@ export class UpdateUserDto {
   @IsEmail()
   email?: string;
 
-  @ApiPropertyOptional({ example: 'Queue Operator' })
+  @ApiPropertyOptional({ example: 'operator' })
+  @IsOptional()
+  @IsString()
+  username?: string;
+
+  @ApiPropertyOptional({
+    deprecated: true,
+    description:
+      'Use `username`. Accepted for compatibility and forwarded to Common Auth as `username`.',
+    example: 'operator',
+  })
   @IsOptional()
   @IsString()
   fullName?: string;
@@ -27,6 +37,22 @@ export class UpdateUserDto {
   @IsOptional()
   @IsBoolean()
   isBlocked?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Organization id for department-scoped users.',
+    example: '00000000-0000-0000-0000-000000000101',
+  })
+  @IsOptional()
+  @IsString()
+  ordId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Department id for department-scoped users.',
+    example: '00000000-0000-0000-0000-000000000301',
+  })
+  @IsOptional()
+  @IsString()
+  departmentId?: string;
 
   @ApiPropertyOptional({
     deprecated: true,

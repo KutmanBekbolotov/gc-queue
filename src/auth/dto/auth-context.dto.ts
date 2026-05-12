@@ -13,6 +13,12 @@ export class AuthContextDto {
   @ApiPropertyOptional({ example: 'Queue Operator' })
   fullName?: string;
 
+  @ApiPropertyOptional({ example: '00000000-0000-0000-0000-000000000101' })
+  ordId?: string;
+
+  @ApiPropertyOptional({ example: '00000000-0000-0000-0000-000000000301' })
+  departmentId?: string;
+
   @ApiPropertyOptional({ example: 'OPERATOR' })
   role?: string;
 

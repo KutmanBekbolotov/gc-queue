@@ -1,4 +1,7 @@
 import {
+  applyCreatorDepartmentScope,
+  assertManagerCreateContext,
+  AuthRoleCode,
   extractBearerToken,
   normalizeAuthContext,
   normalizeRoleCode,
@@ -18,7 +21,9 @@ describe('auth utils', () => {
         user: {
           id: 'user-1',
           email: 'operator@example.com',
-          name: 'Queue Operator',
+          username: 'operator',
+          orgId: 'ord-1',
+          departmentId: 'department-1',
           role: 'Operator',
           roles: ['SuperAdmin', 'ROLE_Manager'],
         },
@@ -28,7 +33,10 @@ describe('auth utils', () => {
       expect.objectContaining({
         id: 'user-1',
         email: 'operator@example.com',
-        fullName: 'Queue Operator',
+        username: 'operator',
+        fullName: 'operator',
+        ordId: 'ord-1',
+        departmentId: 'department-1',
         role: 'OPERATOR',
         roles: ['SUPER_ADMIN', 'MANAGER', 'OPERATOR'],
         scopes: ['queue:read', 'queue:write'],
@@ -48,15 +56,86 @@ describe('auth utils', () => {
       toCommonAuthUserWriteBody({
         email: 'operator@example.com',
         password: 'StrongPassword_123!',
-        fullName: 'Queue Operator',
+        fullName: 'operator',
         role: 'OPERATOR',
+        ordId: 'ord-1',
+        departmentId: 'department-1',
         scopes: ['queue:read'],
       }),
     ).toEqual({
       email: 'operator@example.com',
       password: 'StrongPassword_123!',
-      name: 'Queue Operator',
+      username: 'operator',
+      role: 'Operator',
+      ordId: 'ord-1',
+      departmentId: 'department-1',
+    });
+  });
+
+  it('prefers explicit username over compatibility fullName', () => {
+    expect(
+      toCommonAuthUserWriteBody({
+        email: 'operator@example.com',
+        password: 'StrongPassword_123!',
+        username: 'operator-login',
+        fullName: 'Queue Operator',
+        role: 'OPERATOR',
+      }),
+    ).toEqual({
+      email: 'operator@example.com',
+      password: 'StrongPassword_123!',
+      username: 'operator-login',
       role: 'Operator',
     });
+  });
+
+  it('requires organization and department when creating a manager', () => {
+    expect(() =>
+      assertManagerCreateContext({
+        email: 'manager@example.com',
+        password: 'StrongPassword_123!',
+        username: 'manager',
+        role: AuthRoleCode.MANAGER,
+      }),
+    ).toThrow('ordId and departmentId are required when creating MANAGER');
+
+    expect(() =>
+      assertManagerCreateContext({
+        email: 'manager@example.com',
+        password: 'StrongPassword_123!',
+        username: 'manager',
+        role: AuthRoleCode.MANAGER,
+        ordId: 'ord-1',
+        departmentId: 'department-1',
+      }),
+    ).not.toThrow();
+  });
+
+  it('applies current manager organization and department to created users', () => {
+    expect(
+      applyCreatorDepartmentScope(
+        {
+          email: 'operator@example.com',
+          password: 'StrongPassword_123!',
+          username: 'operator',
+          role: AuthRoleCode.OPERATOR,
+          ordId: 'other-ord',
+          departmentId: 'other-department',
+        },
+        {
+          id: 'manager-1',
+          role: 'MANAGER',
+          roles: ['MANAGER'],
+          scopes: [],
+          ordId: 'ord-1',
+          departmentId: 'department-1',
+        },
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        ordId: 'ord-1',
+        departmentId: 'department-1',
+      }),
+    );
   });
 });

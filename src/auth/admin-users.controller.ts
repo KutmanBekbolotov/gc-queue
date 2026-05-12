@@ -21,6 +21,8 @@ import {
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
+import { AuthRequestUser } from './auth.interfaces';
+import { CurrentUser } from './decorators/current-user.decorator';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
@@ -44,10 +46,15 @@ export class AdminUsersController {
   @ApiBody({ type: CreateUserDto })
   @ApiOkResponse({ description: 'Common Auth user create response' })
   @Post()
-  create(@Body() body: CreateUserDto, @Req() request: Request) {
+  create(
+    @Body() body: CreateUserDto,
+    @CurrentUser() user: AuthRequestUser,
+    @Req() request: Request,
+  ) {
     return this.authService.createUser(
       this.getBearerToken(request),
       body,
+      user,
       request,
     );
   }

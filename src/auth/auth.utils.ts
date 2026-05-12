@@ -1,10 +1,15 @@
-import { BadGatewayException } from '@nestjs/common';
+import { BadGatewayException, BadRequestException } from '@nestjs/common';
 import {
   AuthProxyResponse,
   AuthRequestUser,
   ResolvedAuthModuleOptions,
 } from './auth.interfaces';
-import { normalizeRoleCode, toCommonAuthRole } from './auth.roles';
+import {
+  AuthRoleCode,
+  normalizeRoleCode,
+  toCommonAuthRole,
+} from './auth.roles';
+import type { CreateUserDto } from './dto/create-user.dto';
 
 export { AuthRoleCode, normalizeRoleCode } from './auth.roles';
 
@@ -62,11 +67,58 @@ export function normalizeAuthContext(payload: unknown): AuthRequestUser {
     username: normalizeOptionalString(source.username),
     fullName:
       normalizeOptionalString(source.fullName) ??
-      normalizeOptionalString(source.name),
+      normalizeOptionalString(source.name) ??
+      normalizeOptionalString(source.username),
+    ordId:
+      normalizeOptionalString(source.ordId) ??
+      normalizeOptionalString(source.orgId),
+    departmentId: normalizeOptionalString(source.departmentId),
     role: normalizedRole,
     roles: uniqueStrings(roles),
     scopes,
   };
+}
+
+export function applyCreatorDepartmentScope(
+  body: CreateUserDto,
+  creator: AuthRequestUser,
+): CreateUserDto {
+  if (!isDepartmentManager(creator)) {
+    return body;
+  }
+
+  const ordId = normalizeOptionalString(creator.ordId);
+  const departmentId = normalizeOptionalString(creator.departmentId);
+
+  if (!ordId || !departmentId) {
+    throw new BadRequestException(
+      'Current manager must have ordId and departmentId',
+    );
+  }
+
+  return {
+    ...body,
+    ordId,
+    departmentId,
+  };
+}
+
+export function assertManagerCreateContext(body: CreateUserDto) {
+  const role =
+    typeof body.role === 'string' ? normalizeRoleCode(body.role) : '';
+
+  if (role !== AuthRoleCode.MANAGER) {
+    return;
+  }
+
+  if (
+    !normalizeOptionalString(body.ordId) ||
+    !normalizeOptionalString(body.departmentId)
+  ) {
+    throw new BadRequestException(
+      'ordId and departmentId are required when creating MANAGER',
+    );
+  }
 }
 
 export function toCommonAuthUserWriteBody(
@@ -81,9 +133,9 @@ export function toCommonAuthUserWriteBody(
   const result = removeUndefinedValues(rest);
 
   // Common Auth write DTOs reject `fullName` and `scopes`.
-  // The gateway keeps `fullName` as the frontend contract and maps it here.
-  if (typeof fullName === 'string') {
-    result.name = fullName;
+  // The gateway accepts it for compatibility and maps it to `username`.
+  if (typeof fullName === 'string' && result.username === undefined) {
+    result.username = fullName;
   }
 
   if (typeof role === 'string') {
@@ -146,6 +198,21 @@ function uniqueStrings(values: string[]): string[] {
   return [...new Set(values)];
 }
 
+function isDepartmentManager(user: AuthRequestUser): boolean {
+  const roles = [
+    normalizeOptionalString(user.role),
+    ...(Array.isArray(user.roles) ? user.roles : []),
+  ]
+    .filter((item): item is string => typeof item === 'string')
+    .map(normalizeRoleCode);
+
+  return (
+    roles.includes(AuthRoleCode.MANAGER) &&
+    !roles.includes(AuthRoleCode.ADMIN) &&
+    !roles.includes(AuthRoleCode.SUPER_ADMIN)
+  );
+}
+
 function removeUndefinedValues(
   value: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -172,6 +239,14 @@ function normalizeAuthUserManagementValue(value: unknown): unknown {
 
   if (typeof result.name === 'string' && result.fullName === undefined) {
     result.fullName = result.name;
+  }
+
+  if (typeof result.username === 'string' && result.fullName === undefined) {
+    result.fullName = result.username;
+  }
+
+  if (typeof result.orgId === 'string' && result.ordId === undefined) {
+    result.ordId = result.orgId;
   }
 
   if (typeof result.role === 'string') {

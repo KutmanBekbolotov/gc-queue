@@ -18,6 +18,8 @@ import {
   ResolvedAuthModuleOptions,
 } from './auth.interfaces';
 import {
+  applyCreatorDepartmentScope,
+  assertManagerCreateContext,
   normalizeAuthContext,
   normalizeAuthUserManagementResponse,
   toCommonAuthUserWriteBody,
@@ -74,10 +76,18 @@ export class AuthService {
     }).then(normalizeAuthUserManagementResponse);
   }
 
-  createUser(token: string, body: CreateUserDto, request?: Request) {
+  createUser(
+    token: string,
+    body: CreateUserDto,
+    creator: AuthRequestUser,
+    request?: Request,
+  ) {
+    const scopedBody = applyCreatorDepartmentScope(body, creator);
+    assertManagerCreateContext(scopedBody);
+
     return this.request('POST', '/admin/users', {
       token,
-      body: toCommonAuthUserWriteBody(body),
+      body: toCommonAuthUserWriteBody(scopedBody),
       request,
     }).then(normalizeAuthUserManagementResponse);
   }
